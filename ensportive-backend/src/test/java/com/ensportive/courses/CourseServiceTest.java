@@ -10,9 +10,14 @@ import com.ensportive.teachers.TeacherRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.*;
+
 import java.time.DayOfWeek;
+import java.time.LocalDate;
 import java.time.LocalTime;
+
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 
 class CourseServiceTest {
@@ -25,6 +30,9 @@ class CourseServiceTest {
 
     @Mock
     private TeacherRepository teacherRepository;
+
+    @Mock
+    private CourseMapper courseMapper;
 
     @InjectMocks
     private CourseService courseService;
@@ -43,8 +51,8 @@ class CourseServiceTest {
             4, 
             LocalTime.of(9, 0), 
             DayOfWeek.MONDAY, 
-            null, 
-            false, 
+            LocalDate.of(2024, 11, 1),
+            true, 
             1L, 
             1L, 
             new Long[] {1L, 2L, 3L, 4L}
@@ -59,6 +67,7 @@ class CourseServiceTest {
         teacherEntity.setId(1L);
 
         // Mocking dependencies
+        when(courseMapper.map(any(CourseRequestDTO.class))).thenReturn(courseEntity);
         when(courseRepository.save(any(CourseEntity.class))).thenReturn(courseEntity);
         when(teacherRepository.findById(anyLong())).thenReturn(java.util.Optional.of(teacherEntity));
 
@@ -96,32 +105,50 @@ class CourseServiceTest {
     }
 
     @Test
-    void testCreateCourseWithUniqueLesson() {
+    void testCreateCourseWithUniqueLessonAndNullUniqueDate() {
         // Arrange
-        CourseRequestDTO uniqueCourseRequest = new CourseRequestDTO(
+        CourseRequestDTO invalidRequest = new CourseRequestDTO(
             Sport.TENNIS, 
             Level.ADVANCED, 
             PlanType.GROUP, 
             4, 
             LocalTime.of(9, 0), 
             DayOfWeek.MONDAY, 
-            null, 
-            true,  // uniqueLesson is true
+            null,
+            true,
             1L, 
             1L, 
             new Long[] {1L, 2L, 3L, 4L}
         );
 
-        CourseEntity courseEntity = new CourseEntity();
-        when(courseRepository.save(any(CourseEntity.class))).thenReturn(courseEntity);
-        when(teacherRepository.findById(anyLong())).thenReturn(java.util.Optional.of(new TeacherEntity()));
-
-        // Act
-        Long courseId = courseService.create(uniqueCourseRequest);
-
-        // Assert
-        assertNotNull(courseId);
-        verify(lessonService, times(1)).createUniqueLesson(any(CourseEntity.class));
+        IllegalArgumentException thrown = assertThrows(IllegalArgumentException.class, () -> {
+            courseService.create(invalidRequest);
+        });
+        assertEquals("Date is required for unique lessons", thrown.getMessage());
     }
-}
 
+    @Test
+    void testCreateCourseWithRecurringLessonAndNullWeekDay() {
+        // Arrange
+        CourseRequestDTO invalidRequest = new CourseRequestDTO(
+            Sport.TENNIS, 
+            Level.ADVANCED, 
+            PlanType.GROUP, 
+            4, 
+            LocalTime.of(9, 0), 
+            null,
+            null,
+            false,
+            1L, 
+            1L, 
+            new Long[] {1L, 2L, 3L, 4L}
+        );
+
+        IllegalArgumentException thrown = assertThrows(IllegalArgumentException.class, () -> {
+            courseService.create(invalidRequest);
+        });
+        assertEquals("WeekDay is required for recurring lessons", thrown.getMessage());
+    }
+
+
+}
