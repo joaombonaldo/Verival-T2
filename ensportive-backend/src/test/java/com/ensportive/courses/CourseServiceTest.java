@@ -61,7 +61,6 @@ class CourseServiceTest {
 
     @Test
     void testCreateCourseSuccessfully() {
-        // Arrange
         CourseEntity courseEntity = new CourseEntity();
         TeacherEntity teacherEntity = new TeacherEntity();
         teacherEntity.setId(1L);
@@ -71,10 +70,8 @@ class CourseServiceTest {
         when(courseRepository.save(any(CourseEntity.class))).thenReturn(courseEntity);
         when(teacherRepository.findById(anyLong())).thenReturn(java.util.Optional.of(teacherEntity));
 
-        // Act
         Long courseId = courseService.create(courseRequestDTO);
 
-        // Assert
         assertNotNull(courseId, "Course ID should not be null");
         verify(courseRepository, times(1)).save(any(CourseEntity.class));
         verify(lessonService, times(1)).createFirstLessons(any(CourseEntity.class));
@@ -82,7 +79,6 @@ class CourseServiceTest {
 
     @Test
     void testCreateCourseWithNullHour() {
-        // Arrange
         CourseRequestDTO invalidRequest = new CourseRequestDTO(
             Sport.TENNIS, 
             Level.ADVANCED, 
@@ -97,7 +93,6 @@ class CourseServiceTest {
             new Long[] {1L, 2L, 3L, 4L}
         );
 
-        // Act & Assert
         IllegalArgumentException thrown = assertThrows(IllegalArgumentException.class, () -> {
             courseService.create(invalidRequest);
         });
@@ -106,7 +101,6 @@ class CourseServiceTest {
 
     @Test
     void testCreateCourseWithUniqueLessonAndNullUniqueDate() {
-        // Arrange
         CourseRequestDTO invalidRequest = new CourseRequestDTO(
             Sport.TENNIS, 
             Level.ADVANCED, 
@@ -129,7 +123,6 @@ class CourseServiceTest {
 
     @Test
     void testCreateCourseWithRecurringLessonAndNullWeekDay() {
-        // Arrange
         CourseRequestDTO invalidRequest = new CourseRequestDTO(
             Sport.TENNIS, 
             Level.ADVANCED, 
