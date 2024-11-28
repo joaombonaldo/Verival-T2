@@ -11,6 +11,8 @@ import java.time.LocalTime;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.*;
 
 class LessonServiceTest {
@@ -34,7 +36,7 @@ class LessonServiceTest {
     void setUp() {
         MockitoAnnotations.openMocks(this);
 
-        // Setup mock data for CourseEntity and TeacherEntity
+        // Setup mock data pra CourseEntity e TeacherEntity
         courseEntity = new CourseEntity();
         courseEntity.setId(1L);
         courseEntity.setHour(LocalTime.of(10, 0));
@@ -47,71 +49,77 @@ class LessonServiceTest {
 
     @Test
     void testCreateFirstLessonsSuccessfully() {
-        // Arrange
         when(lessonRepository.saveAll(anyList())).thenReturn(List.of(new LessonEntity()));
         
-        // Act
         lessonService.createFirstLessons(courseEntity);
+    
+        verify(lessonRepository, times(1)).saveAll(anyList());  // Verifica se saveAll foi chamado uma vez
+        verify(lessonRepository, times(1)).saveAll(argThat(list -> 
+            list instanceof List && ((List<?>) list).size() == 12));  // Verifica se a lista contém 12 aulas
+    }    
 
-        // Assert
-        verify(lessonRepository, times(12)).save(any(LessonEntity.class));  // Verifica se 12 aulas foram criadas
-    }
 
     @Test
     void testCreateFirstLessonsWithTeacher() {
-        // Arrange
         courseEntity.setTeacher(teacherEntity);
-        when(lessonRepository.saveAll(anyList())).thenReturn(List.of(new LessonEntity()));
-        
-        // Act
+        when(lessonRepository.saveAll(anyList())).thenReturn(List.of(new LessonEntity()));  // Mock para salvar todas as aulas
+    
         lessonService.createFirstLessons(courseEntity);
-
-        // Assert
-        verify(lessonRepository, times(12)).save(any(LessonEntity.class));  // Verifica se 12 aulas foram criadas
+    
+        // Verifica se o saveAll foi chamado uma vez com uma lista de 12 aulas
+        verify(lessonRepository, times(1)).saveAll(argThat(lessons -> {
+            // Converte o Iterable para List e verifica o tamanho
+            return ((List<LessonEntity>) lessons).size() == 12;
+        }));  
+    
         // Verifica se o professor foi atribuído às aulas
-        verify(lessonRepository, times(12)).save(argThat(lesson -> lesson.getTeacher() == teacherEntity));
-    }
+        verify(lessonRepository, times(1)).saveAll(argThat(lessons -> {
+            // Converte o Iterable para List e verifica se todas as aulas possuem o mesmo professor
+            return ((List<LessonEntity>) lessons).stream().allMatch(lesson -> lesson.getTeacher().equals(teacherEntity));
+        }));
+    }       
+
 
     @Test
     void testCreateFirstLessonsWithNoNextLessonDate() {
-        // Arrange
         courseEntity.setWeekDay(DayOfWeek.FRIDAY);
         courseEntity.setHour(LocalTime.of(18, 0));
         when(lessonRepository.saveAll(anyList())).thenReturn(List.of(new LessonEntity()));
-
-        // Act
+    
         lessonService.createFirstLessons(courseEntity);
-
-        // Assert
-        verify(lessonRepository, times(12)).save(any(LessonEntity.class));  // Verifica se 12 aulas foram criadas
-    }
+    
+        // Verifica se saveAll foi chamado uma vez com uma lista de 12 aulas
+        verify(lessonRepository, times(1)).saveAll(argThat(lessons -> {
+            // Verifica se a lista tem 12 aulas
+            return ((List<LessonEntity>) lessons).size() == 12;
+        }));
+    }    
 
     @Test
     void testCreateFirstLessonsWithInvalidNextLessonDate() {
-        // Arrange
         courseEntity.setWeekDay(DayOfWeek.MONDAY);
         courseEntity.setHour(LocalTime.of(9, 0));
         courseEntity.setStudentsSize(5);
         when(lessonRepository.saveAll(anyList())).thenReturn(List.of(new LessonEntity()));
-
-        // Act
+    
         lessonService.createFirstLessons(courseEntity);
-
-        // Assert
-        verify(lessonRepository, times(12)).save(any(LessonEntity.class));  // Verifica se 12 aulas foram criadas
-    }
+    
+        // Verifica se saveAll foi chamado uma vez com uma lista de 12 aulas
+        verify(lessonRepository, times(1)).saveAll(argThat(lessons -> {
+            // Verifica se a lista tem 12 aulas
+            return ((List<LessonEntity>) lessons).size() == 12;
+        }));
+    }      
 
     @Test
     void testCreateFirstLessonsWithEmptyCourse() {
-        // Arrange
         CourseEntity emptyCourse = new CourseEntity();
         emptyCourse.setHour(null);  // Missing hour
         emptyCourse.setWeekDay(null);  // Missing weekday
         emptyCourse.setStudentsSize(0);  // No students
         
-        // Act & Assert
         assertThrows(IllegalArgumentException.class, () -> {
             lessonService.createFirstLessons(emptyCourse);
         });
-    }
+    }    
 }
